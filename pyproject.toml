@@ -1,0 +1,12 @@
+[project]
+name = "QST"
+version = "0.1.0"
+dependencies = [
+    "ipython",
+    "ipywidgets",
+    "matplotlib",
+    "numpy",
+    "qutip",
+    "scipy",
+    "tqdm",
+]
