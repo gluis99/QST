@@ -85,12 +85,12 @@ def spssqv(N, r, T):
     return final_state.unit()
 
 #######################################################################
-# Calculate quadrature-basis wavefunction <q_0=x|n>
+# Quadrature-basis wavefunction <q_0=x|n>
 def x_n(n, x):
     pref = 1.0 / (np.pi**0.25 * math.sqrt((2.0**n) * math.factorial(n)))
     return hermite(n)(x) * np.exp(-0.5 * x**2) * pref
 
-# Calculate quadrature-basis wavefunction <q_theta=x|n>=<q_0=x|n> * exp(i n theta)
+# Quadrature-basis wavefunction <q_theta=x|n>=<q_0=x|n> * exp(i n theta)
 def qtheta_n(n, theta, x):
     return np.exp(1j * n * theta) * x_n(n, x)
 

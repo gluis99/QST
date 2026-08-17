@@ -142,7 +142,7 @@ class MLE:
         rho_next = np.einsum('nm,mk,kl->nl', R_op, rho_current, R_op)
         return rho_next / np.trace(rho_next)
     # n iterations of the MLE algorithm:
-    def run_MLE_ntimes(self, rho_init=None, n_iterations=None, verbose=False):
+    def run_ntimes(self, rho_init=None, n_iterations=None, verbose=False):
         if rho_init is None:
             rho_init = self.rho_init
 
@@ -162,7 +162,7 @@ class MLE:
             rho_current = rho_next
         return rho_current, fidelities
     # Run MLE until fidelity reaches fid_target or max_iter is reached
-    def run_MLE_fid(self, rho_init=None, fid_target=1.0, max_iter=1000, verbose=False):
+    def run_fid(self, rho_init=None, fid_target=1.0, max_iter=1000, verbose=False):
         if rho_init is None:
             rho_init = self.rho_init
         
@@ -183,6 +183,30 @@ class MLE:
 
             if fid >= fid_target:
                 rho_current
+                break
+
+        return rho_current, fidelities
+    # Run MLE until the algorithm converges to a fixed point
+    def run_setpoint(self, rho_init=None, threshold=1e-6, max_iter=1000, verbose=False):
+        if rho_init is None:
+            rho_init = self.rho_init
+        
+        rho_current = rho_init
+        fidelities = []
+
+        for i in range(max_iter):
+            rho_next = self.one_iteration(rho_current)
+            rho_next /= np.trace(rho_next)
+
+            fid = q.fidelity(q.Qobj(rho_current), q.Qobj(rho_next))**2
+            fidelities.append(fid)
+
+            if verbose:
+                print(f"Iteration {i+1}: Fidelity = {fid:.6f}")
+
+            rho_current = rho_next
+
+            if 1 - fid <= threshold:
                 break
 
         return rho_current, fidelities
