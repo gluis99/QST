@@ -28,8 +28,6 @@ def proj_bins(cutoff,point_projectors, x_vec, bin_edges, N_bins, thetas):
     # Determine which bin each x_vec value belongs to
     bin_idx = np.digitize(x_vec, bin_edges[1:-1], right=False)
     bin_idx = np.clip(bin_idx, 0, N_bins - 1)
-    # Obtain point_projectors[i,n,m]=|q_0=x_i><q_0=x_i|
-    point_projectors = proj_xvec(cutoff, x_vec)
     # Build array of projectors (without phase factors): 
     # proj_bins[b,n,m]= 1/N_b sum_{i in box b} |q_0=x_i><q_0=x_i|
     proj_bins = np.zeros((N_bins, cutoff, cutoff), dtype=complex)
@@ -49,6 +47,7 @@ def proj_bins(cutoff,point_projectors, x_vec, bin_edges, N_bins, thetas):
 #######################################################################
 # Class implementing the maximum likelihood estimation (MLE) algorithm
 # for quantum state tomography given homodyne measurement data.
+
 class MLE:
     def __init__(self, data, N_bins=30, initial_rho=None, N_cutoff=None,
                  x_lims=(-5, 5), x_points=200, bin_edges=None):
@@ -131,83 +130,48 @@ class MLE:
         R_op = np.einsum('abnm,ab,ab->nm', 
                          self.proj_bins, traces_inv, self.hits_prob)
         return R_op/self.N_angles
+    # Compute one iteration: rho' = R(rho) rho R(rho)
+    def one_iteration(self, rho_iter=None):
+        if rho_iter is None:
+            rho_iter = self.rho_init
+        R_op = self.R(rho_iter)
+        return np.einsum('nm,ml,lk->nk', R_op, rho_iter, R_op)
 
     #######################################################################
     # Apply algorithm
-    # One iteration of the MLE algorithm: rho' = R(rho) rho R(rho)
-    def one_iteration(self, rho_current=None):
-        if rho_current is None:
-            rho_current = self.rho_init
-        R_op = self.R(rho_current)
-        rho_next = np.einsum('nm,mk,kl->nl', R_op, rho_current, R_op)
-        return rho_next / np.trace(rho_next)
-    # n iterations of the MLE algorithm:
-    def run_ntimes(self, rho_init=None, n_iterations=None, verbose=False):
-        if rho_init is None:
-            rho_init = self.rho_init
-
-        rho_current = rho_init
+    def run(self, rho_init=None, store_states=False,
+            stop_condition=lambda i, fid: False, max_iter=100, 
+            verbose=False):
+        rho_current = rho_init if rho_init is not None else self.rho_init
         fidelities = []
 
-        for i in range(n_iterations):
-            rho_next = self.one_iteration(rho_current)
-            rho_next /= np.trace(rho_next)
-
-            fid = q.fidelity(q.Qobj(rho_current), q.Qobj(rho_next))**2
-            fidelities.append(fid)
-
-            if verbose:
-                print(f"Iteration {i+1}: Fidelity = {fid:.6f}")
-
-            rho_current = rho_next
-        return rho_current, fidelities
-    # Run MLE until fidelity reaches fid_target or max_iter is reached
-    def run_fid(self, rho_init=None, fid_target=1.0, max_iter=1000, verbose=False):
-        if rho_init is None:
-            rho_init = self.rho_init
-        
-        rho_current = rho_init
-        fidelities = []
+        if store_states:
+            states = [rho_current.copy()]
 
         for i in range(max_iter):
             rho_next = self.one_iteration(rho_current)
             rho_next /= np.trace(rho_next)
-
             fid = q.fidelity(q.Qobj(rho_current), q.Qobj(rho_next))**2
-            fidelities.append(fid)
 
+            if store_states:
+                states.append(rho_next.copy())
+
+            fidelities.append(fid)
             if verbose:
                 print(f"Iteration {i+1}: Fidelity = {fid:.6f}")
-
             rho_current = rho_next
-
-            if fid >= fid_target:
-                rho_current
+            if stop_condition(i, fid):
                 break
-
+        if store_states:
+            return rho_current, fidelities, states
         return rho_current, fidelities
-    # Run MLE until the algorithm converges to a fixed point
-    def run_setpoint(self, rho_init=None, threshold=1e-6, max_iter=1000, verbose=False):
-        if rho_init is None:
-            rho_init = self.rho_init
-        
-        rho_current = rho_init
-        fidelities = []
 
-        for i in range(max_iter):
-            rho_next = self.one_iteration(rho_current)
-            rho_next /= np.trace(rho_next)
+    def run_ntimes(self, n_iterations, **kw):
+        return self.run(max_iter=n_iterations, **kw)
 
-            fid = q.fidelity(q.Qobj(rho_current), q.Qobj(rho_next))**2
-            fidelities.append(fid)
+    def run_fid(self, fid_target=1.0, max_iter=1000, **kw):
+        return self.run(stop_condition=lambda i, fid: fid >= fid_target, max_iter=max_iter, **kw)
 
-            if verbose:
-                print(f"Iteration {i+1}: Fidelity = {fid:.6f}")
-
-            rho_current = rho_next
-
-            if 1 - fid <= threshold:
-                break
-
-        return rho_current, fidelities
+    def run_setpoint(self, threshold=1e-6, max_iter=1000, **kw):
+        return self.run(stop_condition=lambda i, fid: 1 - fid <= threshold, max_iter=max_iter, **kw)
 
