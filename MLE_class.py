@@ -38,7 +38,7 @@ def proj_bins(cutoff,point_projectors, x_vec, bin_edges, N_bins, thetas):
 
     n = np.arange(cutoff)
     # Obtain correct phase factors exp(i (n-m)theta)
-    phase = np.exp(1j * thetas[:, None, None] * (n[:, None] - n[None, :]))
+    phase = np.exp(1j * thetas[:, None, None] * (n[None,:] - n[:,None]))
     # Apply phase factors: array of projectors (with phase factors)
     # proj_bins[b,n,m]=1/N_b sum_{i in box b} |q_theta=x_i><q_theta=x_i|
     proj_j = phase[:, None, :, :] * proj_bins[None, :, :, :]
@@ -47,7 +47,8 @@ def proj_bins(cutoff,point_projectors, x_vec, bin_edges, N_bins, thetas):
 
 
 #######################################################################
-# Implement the maximum likelihood estimation (MLE) algorithm for quantum state tomography
+# Class implementing the maximum likelihood estimation (MLE) algorithm
+# for quantum state tomography given homodyne measurement data.
 class MLE:
     def __init__(self, data, N_bins=30, initial_rho=None, N_cutoff=None,
                  x_lims=(-5, 5), x_points=200, bin_edges=None):
@@ -127,19 +128,20 @@ class MLE:
         # Compute inverse of traces, avoiding division by zero
         traces_inv = np.where(traces != 0, 1.0 / traces, 0.0)
             
-        R_op = np.einsum('abnm,ab,ab->nm', self.proj_bins, traces_inv, self.hits_prob) / self.N_angles
-        return R_op
+        R_op = np.einsum('abnm,ab,ab->nm', 
+                         self.proj_bins, traces_inv, self.hits_prob)
+        return R_op/self.N_angles
 
     #######################################################################
     # Apply algorithm
-
+    # One iteration of the MLE algorithm: rho' = R(rho) rho R(rho)
     def one_iteration(self, rho_current=None):
         if rho_current is None:
             rho_current = self.rho_init
         R_op = self.R(rho_current)
         rho_next = np.einsum('nm,mk,kl->nl', R_op, rho_current, R_op)
         return rho_next / np.trace(rho_next)
-
+    # n iterations of the MLE algorithm:
     def run_MLE_ntimes(self, rho_init=None, n_iterations=None, verbose=False):
         if rho_init is None:
             rho_init = self.rho_init
@@ -159,7 +161,7 @@ class MLE:
 
             rho_current = rho_next
         return rho_current, fidelities
-
+    # Run MLE until fidelity reaches fid_target or max_iter is reached
     def run_MLE_fid(self, rho_init=None, fid_target=1.0, max_iter=1000, verbose=False):
         if rho_init is None:
             rho_init = self.rho_init

@@ -94,24 +94,41 @@ def x_n(n, x):
 def qtheta_n(n, theta, x):
     return np.exp(1j * n * theta) * x_n(n, x)
 
+# Build quadrature-basis wavefunction <q_0=x|n>
+def wf_x(cutoff, xvec):
+    fock_index = np.arange(cutoff)
+    # Return wf_x[n,i]=<q_0=x_i|n>
+    return np.array([x_n(n, xvec) for n in fock_index])
+
+
 # Build quadrature marginal distribution p(q_theta=x)
-def prob_marginal(state, theta, xvec):
+def prob_marginal(state, wf_q):
     # Accept either ket or density operator
     rho = q.ket2dm(state).full() if state.isket else state.full()
-    N = rho.shape[0]
-    wf_x = np.array([[qtheta_n(n, theta, x) for x in xvec] for n in range(N)], dtype=complex)
-    p_x = np.real(np.einsum('ij,ik,kj->j', wf_x, rho, np.conj(wf_x)))
+    # Compute p_x = <q_theta=x|rho|q_theta=x>
+    p_x = np.real(np.einsum('ij,ik,kj->j', wf_q, rho, np.conj(wf_q)))
     return p_x
 
 
 def sample_homodyne(state, n_angles, n_samples_theta, 
                     bin_data=True, x_vec=np.linspace(-5, 5, 200), n_bins=30):
     thetas = np.linspace(0, np.pi, n_angles, endpoint=False)
+
+    # Obtain wf_x[n,i]=<q_0=x_i|n>
+    wf_q0 = wf_x(state.shape[0], x_vec)
+    # Vector of Fock indices n
+    fock_index = np.arange(state.shape[0])
+    # Obtain phase factors phase_factors[a,n]=exp(i *n*theta[a])
+    phase_factors = np.exp(1j * np.einsum('i,j->ji', fock_index, thetas))
+    # Obtain wf_q[a,n,i]=<q_theta[a]=x_i|n>
+    wf_qs = np.einsum('an,ni->ani', phase_factors, wf_q0)
+
     # b_samples: list of  salmples [x^theta_i]
     # If bin_data is True: binned [hits bin, bin edges]
     b_samples = []
-    for i, theta in enumerate(thetas):
-        p =  prob_marginal(state, theta, x_vec)
+    for a in range(n_angles):
+        wf_q = wf_qs[a]
+        p =  prob_marginal(state, wf_q)
         samples_theta = np.random.choice(x_vec, size=n_samples_theta, p=p / p.sum())
         if bin_data:
             hist, bin_edges = np.histogram(samples_theta, bins=n_bins, 
