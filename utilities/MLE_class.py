@@ -14,7 +14,7 @@ DEFAULT_SP_THRESHOLD = 1e-8
 class RunResult:
     
     rho_out: np.ndarray
-    fidelities: List[float]
+    step_fidelities: List[float]
     states: List[np.ndarray] = field(default_factory=list)
 
 
@@ -26,9 +26,7 @@ class MLE:
     def __init__(self, data, N_bins=30, initial_rho=None, N_cutoff=None,
                  x_lims=(-5, 5), x_points=200, bin_edges=None):
         # Raw data: array data[a, i] = x^(theta[a])_i
-        if isinstance(data, list):
-            self.data = np.array(data)
-        self.data = data
+        self.data = np.asarray(data)
 
         self.thetas = np.linspace(0, np.pi, len(self.data), endpoint=False)
 
@@ -90,9 +88,7 @@ class MLE:
 
     def new_data(self, data):
         # Raw data: array data[a, i] = x^(theta[a])_i
-        if isinstance(data, list):
-            self.data = np.array(data)
-        self.data = data
+        self.data = np.asarray(data)
 
         self.thetas = np.linspace(0, np.pi, len(self.data), endpoint=False)
 
@@ -131,13 +127,13 @@ class MLE:
             stop_condition=lambda i, fid: False, max_iter=DEFAULT_MAX_ITER, 
             verbose=False):
         rho_current = rho_init if rho_init is not None else self.rho_init
-        fidelities = []
+        step_fidelities = []
         states = [rho_current.copy()] if store_states else []
 
         for i in range(max_iter):
             rho_next = self.one_iteration(rho_current)
             fid = q.fidelity(q.Qobj(rho_current), q.Qobj(rho_next))**2
-            fidelities.append(fid)
+            step_fidelities.append(fid)
 
             if store_states:
                 states.append(rho_next.copy())
@@ -148,7 +144,7 @@ class MLE:
             if stop_condition(i, fid):
                 break
 
-        return RunResult(rho_out=rho_current, fidelities=fidelities, states=states)
+        return RunResult(rho_out=rho_current, step_fidelities=step_fidelities, states=states)
 
     def run_ntimes(self, n_iterations, **kw):
         return self.run(max_iter=n_iterations, **kw)

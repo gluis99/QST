@@ -59,7 +59,9 @@ def diff_x_values(xlims, n_xvalues, samples, n_bins,
 # Different sample sizes: n_angle_samples[k]=(a_k,s_k): a angles with s samples per angle for k=0,...,K-1
 def diff_samples(n_angle_samples, state, x_vec=np.linspace(-5, 5, 1000), n_bins=20,
                  max_iter=1000, threshold=1e-6,
-                 rho_init=None):
+                 rho_init=None, rng=None):
+
+    rng = np.random.default_rng() if rng is None else rng
 
     # Density matrix of the state
     rho = q.ket2dm(state).full() if state.isket else state.full()
@@ -77,7 +79,7 @@ def diff_samples(n_angle_samples, state, x_vec=np.linspace(-5, 5, 1000), n_bins=
     first = True
     # Loop over different sample sizes
     for n_angles, n_samples in n_angle_samples:
-        # Obtainthetas[a]=pi*a/n_angles
+        # Obtain thetas[a]=pi*a/n_angles
         thetas = np.linspace(0, np.pi, n_angles, endpoint=False)
         # Obtain phase_factors[a,n]=exp(i *n*theta[a])
         phase_factors = np.exp(1j * np.einsum('n,a->an', fock_indices, thetas))
@@ -90,7 +92,7 @@ def diff_samples(n_angle_samples, state, x_vec=np.linspace(-5, 5, 1000), n_bins=
             wf_q = wf_qs[a]
             # Compute p_x = <q_theta=x|rho|q_theta=x>
             p_x = np.real(np.einsum('ij,ik,kj->j', wf_q, rho, np.conj(wf_q)))
-            samples_theta = np.random.choice(x_vec, size=n_samples, p=p_x / p_x.sum())
+            samples_theta = rng.choice(x_vec, size=n_samples, p=p_x / p_x.sum())
             samples.append(samples_theta)
 
         # Run algorithm and store outputs

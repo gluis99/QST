@@ -25,6 +25,7 @@ tempCodeRunnerFile.py
 
 # Generated benchmark outputs
 benchmark_results.h5
+fock_state_data.h5
 results_bins.pkl
 results_samples.pkl
 results_bins.csv
