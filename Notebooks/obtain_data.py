@@ -30,8 +30,8 @@ default_n_angles = 4
 default_n_samples = 1000
 default_bins = 20
 
-max_iter = 100
-fid_threshold = 1e-4
+max_iter = 1000
+fid_threshold = 1e-12
 # Initial state vacuum
 rho_0 = np.zeros((cutoff, cutoff))
 rho_0[0, 0] = 1.0

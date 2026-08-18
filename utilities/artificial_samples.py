@@ -17,6 +17,7 @@ def prob_marginal(state, wf_q):
 
 def sample_homodyne(state, n_angles, n_samples_theta, 
                     bin_data=False, x_vec=np.linspace(-5, 5, 200), n_bins=30):
+    
     thetas = np.linspace(0, np.pi, n_angles, endpoint=False)
 
     fock_indices = np.arange(state.shape[0])

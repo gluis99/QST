@@ -8,9 +8,11 @@ dependencies = [
     "ipywidgets",
     "matplotlib",
     "numpy",
+    "pandas",
     "qutip",
     "scipy",
     "tqdm",
     "line-profiler>=5.0.2",
     "threadpoolctl>=3.6.0",
+    "h5py>=3.16.0",
 ]
