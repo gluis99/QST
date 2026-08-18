@@ -4,6 +4,15 @@ from scipy.special import gammaln, hermite
 
 import qutip as q
 
+# Two mode unitary operator beamsplitter (T)
+def BS_unitary(N, T):
+    # Two-mode annihilation operators in the tensor-product space
+    a = q.tensor(q.destroy(N), q.qeye(N))
+    b = q.tensor(q.qeye(N), q.destroy(N))
+    theta = np.arccos(np.sqrt(T))
+    BS = theta * (a.dag() * b - a * b.dag())
+    return BS.expm()
+
 ########################################################################
 # Useful quantum states
 
@@ -36,6 +45,9 @@ def cat(N, k, alpha: complex,
 
 # Squeezed vacuum state
 def sqv(N, r, theta=0):
+    if r == 0:
+        return q.basis(N, 0)
+
     n = np.arange(N)
     t = np.tanh(r)
 
@@ -45,9 +57,7 @@ def sqv(N, r, theta=0):
 
     log_coeff = (gammaln(2*j + 1) - j * np.log(2)- gammaln(j + 1)
                   + j * np.log(abs(t)) - 0.5 * gammaln(n[mask] + 1))
-
     coeffs = np.zeros(N, dtype=complex)
-
     coeffs[mask] = ((-np.sign(t))**j * np.exp(1j * j * theta) * np.exp(log_coeff))
 
     return q.Qobj(coeffs, dims=[[N], [1]]).unit()
@@ -73,14 +83,12 @@ def pssqv(N, r, m):
 
     return q.Qobj(coeffs, dims=[[N], [1]]).unit()
 
-# Two mode unitary operator beamsplitter (T)
-def BS_unitary(N, T):
-    # Two-mode annihilation operators in the tensor-product space
-    a = q.tensor(q.destroy(N), q.qeye(N))
-    b = q.tensor(q.qeye(N), q.destroy(N))
-    theta = np.arccos(np.sqrt(T))
-    BS = theta * (a.dag() * b - a * b.dag())
-    return BS.expm()
+# 0n state |0> +- |n>
+def ON_state(N, n, parity):
+    state = np.zeros(N, dtype=complex)
+    state[0] = 1.0
+    state[n] = (-1)**parity
+    return q.Qobj(state, dims=[[N], [1]]).unit()
 
 # Single photon subtracted squeezed vacuum state (PSSQV(m=1))
 def pssqv_realistic(N, r, T):

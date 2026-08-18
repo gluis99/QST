@@ -44,11 +44,17 @@ def plot_dm(state, cutoff=None,
     plt.show()
 
 def plot_Wigner(
-                state, 
-                xvec=np.linspace(-5, 5, 200), pvec=np.linspace(-5, 5, 200), 
-                title=None, cmap='RdBu_r', vlim=None,
-                fig_size=(8, 6), 
-                ):
+        state,
+        xvec=np.linspace(-5, 5, 200),
+        pvec=np.linspace(-5, 5, 200),
+        title=None,
+        cmap='RdBu_r',
+        vlim=None,
+        fig_size=(8, 6),
+        ax=None,
+        colorbar=False
+    ):
+
     # Calculate the Wigner function
     W = q.wigner(state, xvec, pvec)
 
@@ -61,21 +67,36 @@ def plot_Wigner(
         vmin, vmax = -m, m
     else:
         vmin, vmax = vlim
-        
-    norm = TwoSlopeNorm(vmin=vmin, vcenter=0.0, vmax=vmax)
 
-    # Create the plot
-    plt.figure(figsize=fig_size)
-    plt.contourf(X, P, W, levels=100, cmap=cmap, norm=norm)
-    plt.colorbar(label=r'$W(x,p)$')
-    
-    # Set labels and title
-    plt.xlabel(r'Quadrature $x$')
-    plt.ylabel(r'Quadrature $p$')
+    norm = TwoSlopeNorm(
+        vmin=vmin,
+        vcenter=0.0,
+        vmax=vmax
+    )
+
+    # Create figure/axes if one wasn't supplied
+    if ax is None:
+        fig, ax = plt.subplots(figsize=fig_size)
+    else:
+        fig = ax.figure
+
+    contour = ax.contourf(
+        X, P, W,
+        levels=100,
+        cmap=cmap,
+        norm=norm
+    )
+
+    ax.set_xlabel(r'Quadrature $x$')
+    ax.set_ylabel(r'Quadrature $p$')
+
     if title:
-        plt.title(title)
-    
-    plt.show()
+        ax.set_title(title)
+
+    if colorbar:
+        fig.colorbar(contour, ax=ax)
+
+    return ax
 
 def plot_fidelities(fidelities, 
                     fig_size=(8, 6), scaling='linlog', title='Fidelity vs Iteration',
