@@ -138,7 +138,8 @@ def diff_samples(n_angle_samples, state, x_vec=np.linspace(-5, 5, 1000), n_bins=
             samples_theta = np.random.choice(x_vec, size=n_samples, p=p_x / p_x.sum())
             samples.append(samples_theta)
 
-        # Create MLE object
+        # Run algorithm and store outputs
+        # Create MLE object on first iteration
         if first:
             MaxLik = MLE(data=samples,N_bins=n_bins,
                          initial_rho=rho_init, 
