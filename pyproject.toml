@@ -11,4 +11,6 @@ dependencies = [
     "qutip",
     "scipy",
     "tqdm",
+    "line-profiler>=5.0.2",
+    "threadpoolctl>=3.6.0",
 ]

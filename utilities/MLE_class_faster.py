@@ -1,8 +1,13 @@
 import numpy as np
 import math
 from scipy.special import gammaln, hermite
+from threadpoolctl import threadpool_limits
 
 import qutip as q
+
+DEFAULT_CUTOFF = 15
+DEFAULT_MAX_ITER = 100
+DEFAULT_SP_THRESHOLD = 1e-8
 
 # Calculate the quadrature-basis wavefunction <q_0=x|n>
 def x_n(n, x):
@@ -44,6 +49,16 @@ def proj_bins(cutoff,point_projectors, x_vec, bin_edges, N_bins, thetas):
     return proj_j
 
 
+# Uhlmann fidelity via eigh (avoids qutip Qobj construction overhead in hot loops)
+def _fidelity_hermitian(rho, sigma):
+    w, v = np.linalg.eigh(rho)
+    w = np.clip(w.real, 0, None)
+    sqrt_rho = (v * np.sqrt(w)) @ v.conj().T
+    A = sqrt_rho @ sigma @ sqrt_rho
+    w2 = np.clip(np.linalg.eigvalsh(A).real, 0, None)
+    return float(np.sum(np.sqrt(w2)) ** 2)
+
+
 #######################################################################
 # Class implementing the maximum likelihood estimation (MLE) algorithm
 # for quantum state tomography given homodyne measurement data.
@@ -74,7 +89,7 @@ class MLE:
     # Set initial state for MLE algorithm
     def set_initial_state(self, state, cutoff=None):
         if state is None and cutoff is None:
-            cutoff = 20
+            cutoff = DEFAULT_CUTOFF
         if cutoff is None:
             cutoff = state.shape[0]
         elif state is None:
@@ -113,6 +128,9 @@ class MLE:
         # Compute projectors onto the bins
         self.proj_bins = proj_bins(self.cutoff, self.point_projectors, self.x_vec, 
                                    self.bin_edges, self.N_bins, self.thetas)
+        # Flattened view (angle*bin, n*m) so R() can use BLAS matmul instead of einsum
+        self._proj_bins_flat = self.proj_bins.reshape(self.N_angles * self.N_bins,
+                                                        self.cutoff * self.cutoff)
 
     #######################################################################
     # Compute R(rho) operator
@@ -121,26 +139,32 @@ class MLE:
         if rho_current is None:
             rho_current = self.rho_init
         
-        # Compute traces tr{proj_j rho} for each angle and bin
-        traces = np.einsum('abnm,mn->ab', self.proj_bins, rho_current)
+        # Compute traces tr{proj_j rho} for each angle and bin via BLAS matmul
+        # (equivalent to einsum('abnm,mn->ab', proj_bins, rho_current))
+        # Matrices here are small, so multi-threaded BLAS thread-spawn overhead
+        # outweighs the actual FLOPs; force single-threaded BLAS for this call.
+        with threadpool_limits(limits=1, user_api='blas'):
+            traces = (self._proj_bins_flat @ rho_current.T.reshape(-1)).reshape(self.N_angles, self.N_bins)
 
-        # Compute inverse of traces, avoiding division by zero
-        traces_inv = np.where(traces != 0, 1.0 / traces, 0.0)
-            
-        R_op = np.einsum('abnm,ab,ab->nm', 
-                         self.proj_bins, traces_inv, self.hits_prob)
+            # Compute inverse of traces, avoiding division by zero
+            traces_inv = np.where(traces != 0, 1.0 / traces, 0.0)
+
+            weights = (traces_inv * self.hits_prob).reshape(-1)
+            R_op = (weights @ self._proj_bins_flat).reshape(self.cutoff, self.cutoff)
         return R_op/self.N_angles
+    
     # Compute one iteration: rho' = R(rho) rho R(rho)
     def one_iteration(self, rho_iter=None):
         if rho_iter is None:
             rho_iter = self.rho_init
         R_op = self.R(rho_iter)
-        return np.einsum('nm,ml,lk->nk', R_op, rho_iter, R_op)
+        rho_prime = R_op @ rho_iter @ R_op
+        return rho_prime/np.trace(rho_prime)
 
     #######################################################################
     # Apply algorithm
     def run(self, rho_init=None, store_states=False,
-            stop_condition=lambda i, fid: False, max_iter=100, 
+            stop_condition=lambda i, fid: False, max_iter=DEFAULT_MAX_ITER, 
             verbose=False):
         rho_current = rho_init if rho_init is not None else self.rho_init
         fidelities = []
@@ -150,8 +174,7 @@ class MLE:
 
         for i in range(max_iter):
             rho_next = self.one_iteration(rho_current)
-            rho_next /= np.trace(rho_next)
-            fid = q.fidelity(q.Qobj(rho_current), q.Qobj(rho_next))**2
+            fid = _fidelity_hermitian(rho_current, rho_next)
 
             if store_states:
                 states.append(rho_next.copy())
@@ -169,9 +192,9 @@ class MLE:
     def run_ntimes(self, n_iterations, **kw):
         return self.run(max_iter=n_iterations, **kw)
 
-    def run_fid(self, fid_target=1.0, max_iter=1000, **kw):
+    def run_fid(self, fid_target=1.0, max_iter=DEFAULT_MAX_ITER, **kw):
         return self.run(stop_condition=lambda i, fid: fid >= fid_target, max_iter=max_iter, **kw)
 
-    def run_setpoint(self, threshold=1e-6, max_iter=1000, **kw):
+    def run_setpoint(self, threshold=DEFAULT_SP_THRESHOLD, max_iter=DEFAULT_MAX_ITER, **kw):
         return self.run(stop_condition=lambda i, fid: 1 - fid <= threshold, max_iter=max_iter, **kw)
 
