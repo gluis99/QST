@@ -201,6 +201,11 @@ def state_done(h5, state):
     )
 
 
+def benchmark_state_done(h5, benchmark_name, state):
+    """Check whether one benchmark already exists for a state."""
+    return state["label"] in h5[benchmark_name].get(state["family"], {})
+
+
 def save_target_state(h5, state):
     """Persist the target density matrix itself, so it can be reloaded without
     depending on the generator functions (fock, cat, ON_state) that built it."""
@@ -216,7 +221,12 @@ def save_target_state(h5, state):
 def save_state_results(h5, benchmark_name, state, result):
     """Write one state's results and flush to disk immediately."""
     benchmark_group = h5[benchmark_name]
-    state_group = benchmark_group.require_group(state["family"]).create_group(state["label"])
+    family_group = benchmark_group.require_group(state["family"])
+    # Resume-safe overwrite: if a partial group exists from an earlier crash,
+    # replace it atomically at the group level.
+    if state["label"] in family_group:
+        del family_group[state["label"]]
+    state_group = family_group.create_group(state["label"])
     for name, value in state.items():
         if name != "target_state":
             state_group.attrs[name] = value
@@ -256,8 +266,10 @@ def main():
             tqdm.write(f"Running {state['family']}: {state['label']}")
             rng = np.random.default_rng(child_seed)
             target_state = state["target_state"]
-            save_state_results(h5, "bins", state, benchmark_bins(target_state, rng))
-            save_state_results(h5, "samples", state, benchmark_samples(target_state, rng))
+            if not benchmark_state_done(h5, "bins", state):
+                save_state_results(h5, "bins", state, benchmark_bins(target_state, rng))
+            if not benchmark_state_done(h5, "samples", state):
+                save_state_results(h5, "samples", state, benchmark_samples(target_state, rng))
 
 
 if __name__ == "__main__":

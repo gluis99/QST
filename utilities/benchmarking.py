@@ -6,6 +6,19 @@ import qutip as q
 
 from .wavefunctions_projectors import x_n_range
 
+# Clip nevative values and normalize to get a valid probability distribution
+def _normalize_probabilities(p_x):
+    p = np.asarray(p_x, dtype=np.float64)
+    p = np.clip(p, 0.0, None)
+    total = p.sum()
+    if not np.isfinite(total) or total <= 0.0:
+        p = np.abs(np.asarray(p_x, dtype=np.float64))
+        total = p.sum()
+    if not np.isfinite(total) or total <= 0.0:
+        p = np.ones_like(p, dtype=np.float64)
+        total = p.sum()
+    return p / total
+
 # Run MLE algorithm for different parameters and return a list of RunResult outputs
 # Different number of bins
 def diff_bins(n_bins_array, xlims, x_points, samples,
@@ -92,7 +105,11 @@ def diff_samples(n_angle_samples, state, x_vec=np.linspace(-5, 5, 1000), n_bins=
             wf_q = wf_qs[a]
             # Compute p_x = <q_theta=x|rho|q_theta=x>
             p_x = np.real(np.einsum('ij,ik,kj->j', wf_q, rho, np.conj(wf_q)))
-            samples_theta = rng.choice(x_vec, size=n_samples, p=p_x / p_x.sum())
+            samples_theta = rng.choice(
+                x_vec,
+                size=n_samples,
+                p=_normalize_probabilities(p_x),
+            )
             samples.append(samples_theta)
 
         # Run algorithm and store outputs

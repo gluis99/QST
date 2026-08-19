@@ -5,6 +5,25 @@ import qutip as q
 
 from .wavefunctions_projectors import x_n_range
 
+
+def _normalize_probabilities(p_x):
+    """Return a numerically safe discrete probability vector.
+
+    Theoretical marginals are non-negative, but finite precision may introduce
+    tiny negative values. We clip them and fall back safely if normalization is
+    degenerate.
+    """
+    p = np.asarray(p_x, dtype=np.float64)
+    p = np.clip(p, 0.0, None)
+    total = p.sum()
+    if not np.isfinite(total) or total <= 0.0:
+        p = np.abs(np.asarray(p_x, dtype=np.float64))
+        total = p.sum()
+    if not np.isfinite(total) or total <= 0.0:
+        p = np.ones_like(p, dtype=np.float64)
+        total = p.sum()
+    return p / total
+
 #######################################################################
 # Build quadrature marginal distribution p(q_theta=x)
 def prob_marginal(state, wf_q):
@@ -35,7 +54,11 @@ def sample_homodyne(state, n_angles, n_samples_theta,
     for a in range(n_angles):
         wf_q = wf_qs[a]
         p =  prob_marginal(state, wf_q)
-        samples_theta = rng.choice(x_vec, size=n_samples_theta, p=p / p.sum())
+        samples_theta = rng.choice(
+            x_vec,
+            size=n_samples_theta,
+            p=_normalize_probabilities(p),
+        )
         if bin_data:
             hist, bin_edges = np.histogram(samples_theta, bins=n_bins, 
                                            range=(x_vec[0], x_vec[-1]), density=True)
