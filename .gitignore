@@ -32,3 +32,6 @@ results_bins.pkl
 results_samples.pkl
 results_bins.csv
 results_samples.csv
+
+# Generated plots
+Figures_MLE_benchmark
