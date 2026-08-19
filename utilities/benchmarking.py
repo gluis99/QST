@@ -4,7 +4,7 @@ from .MLE_class import MLE
 #from .MLE_class_faster import MLE as MLE_faster
 import qutip as q
 
-from .functions import x_n_range
+from .wavefunctions_projectors import x_n_range
 
 # Run MLE algorithm for different parameters and return a list of RunResult outputs
 # Different number of bins

@@ -8,12 +8,19 @@ import numpy as np
 import qutip as q
 from tqdm.auto import tqdm
 
-root = Path(__file__).resolve().parents[1]
-sys.path.insert(0, str(root))
+root = Path(__file__).resolve().parent.parent
 
-from utilities.functions import ON_state, cat, fock, sqv
-from utilities.artificial_samples import sample_homodyne
-from utilities.benchmarking import diff_bins, diff_samples
+try:
+    from .states import ON_state, cat, fock, sqv
+    from .artificial_samples import sample_homodyne
+    from .benchmarking import diff_bins, diff_samples
+except ImportError:
+    # Allow running this file directly as a script from the repo root.
+    if str(root) not in sys.path:
+        sys.path.insert(0, str(root))
+    from utilities.states import ON_state, cat, fock, sqv
+    from utilities.artificial_samples import sample_homodyne
+    from utilities.benchmarking import diff_bins, diff_samples
 
 # Squeezing (dB) -> squeezing parameter r: dB = 20 * r * log10(e)
 def r_from_dB(r_dB):

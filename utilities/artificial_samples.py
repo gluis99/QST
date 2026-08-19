@@ -3,7 +3,7 @@ import math
 from scipy.special import gammaln, hermite
 import qutip as q
 
-from .functions import x_n_range
+from .wavefunctions_projectors import x_n_range
 
 #######################################################################
 # Build quadrature marginal distribution p(q_theta=x)

@@ -7,7 +7,7 @@ from ipywidgets import (
 )
 from IPython.display import clear_output, display
 
-from utilities.functions import fock, cat, sqv, ON_state
+from utilities.states import fock, cat, sqv, ON_state
 from utilities.plotting import plot_Wigner
 
 dB_to_r = lambda dB: dB * np.log(10) / 20  # Convert squeezing dB to squeezing parameter r
@@ -193,6 +193,9 @@ def update_n_max(change):
 def update_wigner(change=None):
     with wigner_output:
         clear_output(wait=True)
+        # Sweep away any figures left open by earlier runs (e.g. before a kernel
+        # restart), otherwise the inline backend re-displays them below this cell.
+        plt.close('all')
 
         state = get_selected_state()
 
@@ -202,7 +205,7 @@ def update_wigner(change=None):
         xvec = np.linspace(xmin, xmax, npoints)
         pvec = np.linspace(xmin, xmax, npoints)
 
-        plot_Wigner(
+        ax = plot_Wigner(
             state,
             xvec=xvec,
             pvec=pvec,
@@ -212,7 +215,11 @@ def update_wigner(change=None):
         )
 
         plt.tight_layout()
-        plt.show()
+        # Display the figure directly instead of plt.show(), which can render
+        # multiple times if the inline backend's show() has been re-patched
+        # by repeated %matplotlib inline setup within the same kernel.
+        display(ax.figure)
+        plt.close(ax.figure)
 
 
 def confirm_state(button=None):

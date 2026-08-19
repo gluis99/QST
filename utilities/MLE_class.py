@@ -3,7 +3,7 @@ import qutip as q
 from dataclasses import dataclass, field
 from typing import List
 
-from .functions import proj_xvec, proj_bins
+from .wavefunctions_projectors import proj_xvec, proj_bins
 
 DEFAULT_CUTOFF = 15
 DEFAULT_MAX_ITER = 100
