@@ -18,7 +18,12 @@ This creates or updates the project's `.venv` environment using the dependencies
 
 ### Run in VS Code
 
-1. Open `QST_nb.ipynb` in VS Code.
+The supported notebooks are:
+
+- `Notebooks/interactive.ipynb` for interactive state reconstruction.
+- `Notebooks/benchmark_nb.ipynb` for exploring benchmark results.
+
+1. Open one of the supported notebooks in VS Code.
 2. Select the Python interpreter from `.venv` when prompted.
 3. Select the `QST (.venv)` notebook kernel.
 4. Run the notebook cells from top to bottom.
@@ -30,3 +35,13 @@ uv run python --version
 uv run which python       # Linux and macOS
 uv run where python       # Windows
 ```
+
+## Generate Benchmark Data
+
+The benchmark data-generation script lives with the reusable Python modules:
+
+```bash
+uv run python utilities/obtain_data.py --output benchmark_results_10runs.h5
+```
+
+The generated HDF5 result files are kept local and are not committed to the repository.

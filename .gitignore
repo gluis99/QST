@@ -16,6 +16,8 @@ venv/
 Notebooks/interactive_first_try.ipynb
 Notebooks/testing.ipynb
 Notebooks/testing2.ipynb
+Notebooks/results.ipynb
+Notebooks/results_first_try.ipynb
 
 # Local editor and OS files
 .vscode/
@@ -24,7 +26,7 @@ Notebooks/testing2.ipynb
 tempCodeRunnerFile.py
 
 # Generated benchmark outputs
-benchmark_results.h5
+benchmark_results*.h5
 fock_state_data.h5
 results_bins.pkl
 results_samples.pkl
