@@ -1,3 +1,4 @@
+import argparse
 import sys
 import time
 from pathlib import Path
@@ -10,29 +11,33 @@ from tqdm.auto import tqdm
 root = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(root))
 
-from utilities.functions import ON_state, cat, fock
+from utilities.functions import ON_state, cat, fock, sqv
 from utilities.artificial_samples import sample_homodyne
 from utilities.benchmarking import diff_bins, diff_samples
 
+# Squeezing (dB) -> squeezing parameter r: dB = 20 * r * log10(e)
+def r_from_dB(r_dB):
+    return r_dB * np.log(10) / 20
+
 # Simulation settings
 x_lim = (-5, 5)
-x_points = 1000
+x_points = 2000
 x_vec = np.linspace(x_lim[0], x_lim[1], x_points)
 cutoff = 50
 default_n_angles = 4
 default_bins = 20
-max_iter = 1000
+max_iter = 300
 fid_threshold = 1e-5
 rho_0 = np.zeros((cutoff, cutoff))
 rho_0[0, 0] = 1.0
 
 default_n_samples = 1000
 n_bins_list = np.arange(1, 30)
-n_angles_list = np.arange(2, 20)
+n_angles_list = np.array([2,3,4,5,6,8,12,16])
 n_samples_list = np.arange(100, 1000, 100)
 seed = 12345
 # Independent measurement realizations + reconstructions per configuration
-n_repeats = 20
+n_repeats = 10
 
 
 def benchmark_bins(target_state, rng):
@@ -109,24 +114,15 @@ def benchmark_samples(target_state, rng):
 
 def build_states():
     """Return target states with labels and parameters for HDF5 metadata."""
-    states = [
-        {
-            "family": "Fock",
-            "label": f"n_{number}",
-            "target_state": fock(cutoff, number),
-            "fock_number": number,
-        }
-        for number in range(5)
-    ]
+    states = []
 
     for parity_name, parity in (("even", 0), ("odd", 1)):
-        for alpha in np.arange(0.0, 3.5, 0.5):
-            target_state = fock(cutoff, 1) if alpha == 0.0 and parity else cat(cutoff, parity, alpha)
+        for alpha in (0.5, 1.0, 1.5, 2.0, 2.5):
             states.append(
                 {
                     "family": "cat",
                     "label": f"alpha_{alpha:.1f}_{parity_name}",
-                    "target_state": target_state,
+                    "target_state": cat(cutoff, parity, alpha),
                     "alpha": alpha,
                     "parity": parity_name,
                 }
@@ -141,6 +137,21 @@ def build_states():
                     "target_state": ON_state(cutoff, number, parity),
                     "on_number": number,
                     "parity": parity_name,
+                }
+            )
+
+    theta_labels = {0: "0", 1: "1"}
+    for r_dB in (3, 6, 9):
+        r = r_from_dB(r_dB)
+        for theta, theta_label in theta_labels.items():
+            states.append(
+                {
+                    "family": "sqv",
+                    "label": f"rdB_{r_dB}_theta_{theta_label}",
+                    "target_state": sqv(cutoff, r, theta),
+                    "r_dB": r_dB,
+                    "r": r,
+                    "theta": theta,
                 }
             )
     return states
@@ -210,11 +221,19 @@ def save_state_results(h5, benchmark_name, state, result):
 
 
 def main():
+    parser = argparse.ArgumentParser()
+    parser.add_argument(
+        "--output", default="benchmark_results_10runs.h5",
+        help="Output HDF5 filename (relative to the repo root). Use a distinct "
+             "name to run concurrently with another instance of this script.",
+    )
+    args = parser.parse_args()
+
     states = build_states()
     # Independent child RNG per state (derived from the master seed) so that
     # skipping already-computed states on resume doesn't change other states' draws.
     child_seeds = np.random.SeedSequence(seed).spawn(len(states))
-    output_path = root / "benchmark_results.h5"
+    output_path = root / args.output
 
     # Resume support: reopen an existing (partially completed) file and skip
     # states that were already computed and flushed to disk.
