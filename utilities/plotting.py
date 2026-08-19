@@ -98,25 +98,308 @@ def plot_Wigner(
 
     return ax
 
-def plot_fidelities(fidelities, 
-                    fig_size=(8, 6), scaling='linlog', title='Fidelity vs Iteration',
-                    color='blue', marker='o', linestyle='-', linewidth=2, markersize=6,
-                    with_gritd=True):
-    plt.figure(figsize=fig_size)
+def plot_fidelities(fidelities,
+                    fig_size=(8, 6), xscale='linear', yscale='linear',
+                    title='Fidelity vs Iteration',
+                    color='blue', marker='o', linestyle='-',
+                    linewidth=2, markersize=6, with_grid=True):
 
-    if scaling == 'loglog':
-        plt.loglog(fidelities, color=color, marker=marker, 
-                   linestyle=linestyle, linewidth=linewidth, markersize=markersize)
-    elif scaling == 'linlog' or scaling == 'linear':
-        if scaling == 'linlog':
-            fidelities = np.log10(fidelities)
-        plt.plot(fidelities, color=color, marker=marker, 
-                 linestyle=linestyle, linewidth=linewidth, markersize=markersize)
-    else:
-        raise ValueError("Invalid scaling option. Choose 'loglog', 'linlog', or 'linear'.")
-    plt.xlabel('Iteration')
-    plt.ylabel('Fidelity')
-    plt.title(title)
-    if with_gritd:
-        plt.grid(True, which='both', ls='--', lw=0.5)
+    # Convert input to a NumPy array
+    fidelities = np.asarray(fidelities)
+    # Iteration numbers
+    iterations = np.arange(1, len(fidelities) + 1)
+
+    # Validate axis scales
+    if xscale not in ('linear', 'log'):
+        raise ValueError("xscale must be either 'linear' or 'log'.")
+
+    if yscale not in ('linear', 'log'):
+        raise ValueError("yscale must be either 'linear' or 'log'.")
+
+    # Log axes require strictly positive values
+    if xscale == 'log' and np.any(iterations <= 0):
+        raise ValueError("Logarithmic x-axis requires positive iteration values.")
+
+    if yscale == 'log' and np.any(fidelities <= 0):
+        raise ValueError("Logarithmic y-axis requires all fidelity values to be positive.")
+
+    # Create figure and axes
+    fig, ax = plt.subplots(figsize=fig_size)
+
+    # Plot the original data -- do NOT manually take log10
+    ax.plot(iterations, fidelities, color=color, marker=marker,
+        linestyle=linestyle, linewidth=linewidth, markersize=markersize)
+
+    # Set axis scales
+    ax.set_xscale(xscale)
+    ax.set_yscale(yscale)
+
+    # Labels and title
+    ax.set_xlabel('Iteration')
+    ax.set_ylabel('Fidelity')
+    ax.set_title(title)
+
+    # Grid
+    if with_grid:
+        ax.grid(True, which='both', linestyle='--', linewidth=0.5)
+
+    # Keep layout clean
+    fig.tight_layout()
+
     plt.show()
+
+    return fig, ax
+
+#########################################################
+# Utilities for homodyne sampling and plotting
+def plot_homodyne(
+    state,
+    thetas,
+    samples,
+    x_vec,
+    bins=200,
+    theta_index=0,
+    figsize=(12, 9),
+    theta_width=0.025,
+    random_seed=42,
+):
+
+    # ==============================================================
+    # Convert inputs
+    # ==============================================================
+
+    thetas = np.asarray(thetas)
+    samples = np.asarray(samples)
+    x_vec = np.asarray(x_vec)
+
+    # ==============================================================
+    # Validate inputs
+    # ==============================================================
+
+    if samples.ndim != 2:
+        raise ValueError(
+            "samples must be a 2D array with shape "
+            "(n_angles, n_samples_per_angle)."
+        )
+
+    if len(thetas) != samples.shape[0]:
+        raise ValueError(
+            "The number of thetas must match the first dimension "
+            "of samples."
+        )
+
+    if not 0 <= theta_index < len(thetas):
+        raise ValueError(
+            f"theta_index must be between 0 and "
+            f"{len(thetas) - 1}, got {theta_index}."
+        )
+
+    if bins < 1:
+        raise ValueError(
+            "bins must be >= 1."
+        )
+
+    # ==============================================================
+    # Selected marginal
+    # ==============================================================
+
+    theta_selected = thetas[theta_index]
+    x_selected = samples[theta_index]
+
+    # ==============================================================
+    # Figure
+    # ==============================================================
+
+    fig = plt.figure(
+        figsize=figsize,
+        constrained_layout=True,
+    )
+
+    gs = fig.add_gridspec(
+        2,
+        1,
+        height_ratios=[3, 2],
+    )
+
+    ax1 = fig.add_subplot(gs[0])
+    ax2 = fig.add_subplot(gs[1])
+
+    # ==============================================================
+    # Top plot: all homodyne measurements
+    # ==============================================================
+
+    theta_scatter = np.repeat(
+        thetas,
+        samples.shape[1],
+    )
+
+    x_scatter = samples.flatten()
+
+    # Fixed jitter for reproducible visualization
+    rng = np.random.default_rng(random_seed)
+
+    theta_jitter = rng.uniform(
+        -theta_width,
+        theta_width,
+        size=theta_scatter.shape,
+    )
+
+    ax1.scatter(
+        theta_scatter + theta_jitter,
+        x_scatter,
+        s=4,
+        alpha=0.12,
+        linewidths=0,
+    )
+
+    # ==============================================================
+    # Highlight selected theta
+    # ==============================================================
+
+    selected_theta_jitter = rng.uniform(
+        -theta_width,
+        theta_width,
+        size=len(x_selected),
+    )
+
+    ax1.scatter(
+        theta_selected + selected_theta_jitter,
+        x_selected,
+        s=10,
+        alpha=0.55,
+        linewidths=0,
+    )
+
+    ax1.axvline(
+        theta_selected,
+        linestyle='--',
+        linewidth=1.5,
+        alpha=0.8,
+    )
+
+    ax1.set_xlabel(
+        r'LO phase $\theta$',
+        fontsize=13,
+    )
+
+    ax1.set_ylabel(
+        r'Quadrature $x_\theta$',
+        fontsize=13,
+    )
+
+    ax1.set_title(
+        'Homodyne Measurements',
+        fontsize=14,
+    )
+
+    # ==============================================================
+    # Bottom plot: marginal distribution
+    # ==============================================================
+
+    ax2.hist(
+        x_selected,
+        bins=bins,
+        density=True,
+        alpha=0.75,
+        label='Samples',
+    )
+
+    # ==============================================================
+    # KDE
+    # ==============================================================
+
+    x_kde = np.linspace(
+        x_vec[0],
+        x_vec[-1],
+        len(x_vec),
+    )
+
+    std = np.std(x_selected)
+    n = len(x_selected)
+
+    bandwidth = (
+        1.06
+        * std
+        * n ** (-1 / 5)
+    )
+
+    bandwidth = max(
+        bandwidth,
+        1e-3,
+    )
+
+    kde = np.zeros_like(x_kde)
+
+    # Chunked calculation to avoid creating a huge
+    # x_kde × samples array.
+    chunk_size = 500
+
+    for start in range(
+        0,
+        len(x_selected),
+        chunk_size,
+    ):
+
+        x_chunk = x_selected[
+            start:start + chunk_size
+        ]
+
+        kde += np.sum(
+            np.exp(
+                -0.5
+                * (
+                    (
+                        x_kde[:, None]
+                        - x_chunk[None, :]
+                    )
+                    / bandwidth
+                ) ** 2
+            ),
+            axis=1,
+        )
+
+    kde /= (
+        len(x_selected)
+        * bandwidth
+        * np.sqrt(2 * np.pi)
+    )
+
+    ax2.plot(
+        x_kde,
+        kde,
+        linewidth=2.5,
+        label='KDE',
+    )
+
+    # ==============================================================
+    # Labels
+    # ==============================================================
+
+    ax2.set_xlabel(
+        r'Quadrature $x_\theta$',
+        fontsize=13,
+    )
+
+    ax2.set_ylabel(
+        r'$P(x_\theta)$',
+        fontsize=13,
+    )
+
+    ax2.set_title(
+        rf'Marginal Distribution at '
+        rf'$\theta={theta_selected:.3f}$ rad',
+        fontsize=14,
+    )
+
+    ax2.set_xlim(
+        x_vec[0],
+        x_vec[-1],
+    )
+
+    ax2.grid(
+        alpha=0.2,
+    )
+
+    ax2.legend()
+
+    return fig, (ax1, ax2)

@@ -84,8 +84,20 @@ x_range_slider = FloatRangeSlider(
 )
 
 x_points_slider = IntSlider(
-    value=200, min=50, max=1000, step=10,
+    value=100, min=50, max=1000, step=10,
     description='Points:', continuous_update=False,
+)
+
+fidelity_xscale_dropdown = Dropdown(
+    options=[('Linear', 'linear'), ('Log', 'log')],
+    value='linear', description='Fidelity x-scale:',
+    style={'description_width': '110px'},
+)
+
+fidelity_yscale_dropdown = Dropdown(
+    options=[('Linear', 'linear'), ('Log', 'log')],
+    value='linear', description='Fidelity y-scale:',
+    style={'description_width': '110px'},
 )
 
 wigner_output = Output()
@@ -103,7 +115,10 @@ WIGNER_ASPECT_RATIO = 7.2 / 5.6
 WIGNER_FIG_WIDTH_IN = ROW_WIDTH_PX / 100
 WIGNER_FIG_HEIGHT_IN = WIGNER_FIG_WIDTH_IN / WIGNER_ASPECT_RATIO
 
-plot_settings_box = VBox([x_range_slider, x_points_slider])
+plot_settings_box = VBox([
+    x_range_slider, x_points_slider,
+    fidelity_xscale_dropdown, fidelity_yscale_dropdown,
+])
 plot_settings_accordion = Accordion(
     children=[plot_settings_box],
     layout=Layout(margin=f'0 0 0 {ACCORDION_MARGIN_PX}px', width=f'{ACCORDION_WIDTH_PX}px')
