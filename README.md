@@ -21,9 +21,9 @@ a **Bayesian mean estimate (BME)** and contrast its behaviour with MLE.
   data, with configurable Fock-space cutoff, bin count/edges, and
   stopping criteria (fixed iterations, fidelity target, or fidelity-change
   setpoint).
-- **Bayesian mean estimate**: reconstruction via posterior sampling /
-  averaging over density matrices, compared against MLE on the same
-  simulated data. *(in progress)*
+- **Bayesian mean estimate**: reconstruction via Metropolis-Hastings
+  posterior sampling over density matrices, compared against MLE on the
+  same simulated data. *(draft, see `Notebooks/BME_homodyne.ipynb`)*
 - **Benchmarking** (`utilities/benchmarking.py`, `utilities/obtain_data.py`):
   sweep MLE reconstruction fidelity and convergence speed over the number
   of histogram bins, number of measurement angles, and samples per angle,
@@ -31,11 +31,15 @@ a **Bayesian mean estimate (BME)** and contrast its behaviour with MLE.
   squeezing levels. Results are computed with seeded RNGs, checkpointed to
   HDF5 as they're produced, and resumable if interrupted.
 - **Interactive tools** (`Notebooks/interactive.ipynb`,
-  `utilities/state_selector_interactive.py`): pick a target state and its
-  parameters via widgets, visualize its Wigner function, and run MLE
-  reconstruction on simulated data from it.
+  `utilities/state_selector_interactive.py`,
+  `utilities/algorithm_interactive.py`): pick a target state and its
+  parameters via widgets and preview its Wigner function, then run MLE
+  reconstruction on simulated data from it, with live plots of the
+  homodyne samples, the convergence, and the reconstructed Wigner
+  function.
 - **Plotting** (`utilities/plotting.py`): density matrix heatmaps, Wigner
-  functions, and fidelity-vs-iteration convergence curves.
+  functions, fidelity-vs-iteration convergence curves, and homodyne
+  sample histograms.
 
 ## Repository structure
 
@@ -44,6 +48,7 @@ Notebooks/
   interactive.ipynb              interactive state selection + MLE reconstruction
   MLE_reconstruction_interactive.ipynb   walkthrough of the MLE algorithm
   benchmark_nb.ipynb              exploration of saved benchmark results
+  BME_homodyne.ipynb              draft: Bayesian mean estimation via Metropolis-Hastings
 utilities/
   states.py                       target quantum states (Fock, cat, sqv, ON, ...)
   artificial_samples.py           simulated homodyne sampling
@@ -51,8 +56,9 @@ utilities/
   MLE_class.py                    MLE (RρR) reconstruction algorithm
   benchmarking.py                 parameter sweeps for MLE reconstruction
   obtain_data.py                  script: run full benchmark suite, save to HDF5
-  state_selector_interactive.py   ipywidgets UI for interactive.ipynb
-  plotting.py                     density matrix / Wigner / fidelity plots
+  state_selector_interactive.py   ipywidgets UI: pick a target state and parameters
+  algorithm_interactive.py        ipywidgets UI: sample, reconstruct, and plot results
+  plotting.py                     density matrix / Wigner / fidelity / homodyne plots
 ```
 
 ## Setup
@@ -111,6 +117,8 @@ the repository.
 - [x] Simulated homodyne data generation
 - [x] MLE (RρR) reconstruction
 - [x] MLE benchmarking across bin count, angle count, and sample size
-- [ ] Bayesian mean estimate implementation and comparison against MLE
-- [ ] Neural-network-based reconstruction (stretch goal, may be dropped
-      depending on time)
+- [ ] Bayesian mean estimate implementation and comparison against MLE.
+      A draft (`Notebooks/BME_homodyne.ipynb`) reconstructs a state with
+      Metropolis-Hastings sampling, but it depends on a separate
+      `bme_homodyne` package that is not yet part of this repository, so
+      the notebook is not runnable as-is.
