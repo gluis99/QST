@@ -5,12 +5,6 @@ __pycache__/
 .mypy_cache/
 .ruff_cache/
 
-# Local Python environments and secrets
-.venv/
-venv/
-.env
-.envrc
-
 # Jupyter temporary files and exploratory notebooks
 .ipynb_checkpoints/
 Notebooks/interactive_first_try.ipynb
