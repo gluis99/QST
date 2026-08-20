@@ -23,7 +23,7 @@ a **Bayesian mean estimate (BME)** and contrast its behaviour with MLE.
   setpoint).
 - **Bayesian mean estimate**: reconstruction via Metropolis-Hastings
   posterior sampling over density matrices, compared against MLE on the
-  same simulated data. *(draft, see `Notebooks/BME_homodyne.ipynb`)*
+  same simulated data. *(`Notebooks/BME_homodyne.ipynb`)*
 - **Benchmarking** (`utilities/benchmarking.py`, `utilities/obtain_data.py`):
   sweep MLE reconstruction fidelity and convergence speed over the number
   of histogram bins, number of measurement angles, and samples per angle,
@@ -59,6 +59,14 @@ utilities/
   state_selector_interactive.py   ipywidgets UI: pick a target state and parameters
   algorithm_interactive.py        ipywidgets UI: sample, reconstruct, and plot results
   plotting.py                     density matrix / Wigner / fidelity / homodyne plots
+bme_homodyne/
+  __init__.py
+  diagnostics.py
+  homodyne.py
+  likelihood.py
+  mcmc.py
+  priors.py
+  states.py
 ```
 
 ## Setup
@@ -117,8 +125,6 @@ the repository.
 - [x] Simulated homodyne data generation
 - [x] MLE (RρR) reconstruction
 - [x] MLE benchmarking across bin count, angle count, and sample size
-- [ ] Bayesian mean estimate implementation and comparison against MLE.
+- [x] Bayesian mean estimate implementation and comparison against MLE.
       A draft (`Notebooks/BME_homodyne.ipynb`) reconstructs a state with
-      Metropolis-Hastings sampling, but it depends on a separate
-      `bme_homodyne` package that is not yet part of this repository, so
-      the notebook is not runnable as-is.
+      Metropolis-Hastings sampling, it depends on `bme_homodyne` folder
