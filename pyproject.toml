@@ -15,4 +15,5 @@ dependencies = [
     "line-profiler>=5.0.2",
     "threadpoolctl>=3.6.0",
     "h5py>=3.16.0",
+    "jupyterlab>=4.6.3",
 ]
