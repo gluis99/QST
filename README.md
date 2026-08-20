@@ -60,13 +60,13 @@ utilities/
   algorithm_interactive.py        ipywidgets UI: sample, reconstruct, and plot results
   plotting.py                     density matrix / Wigner / fidelity / homodyne plots
 bme_homodyne/
-  __init__.py
-  diagnostics.py
-  homodyne.py
-  likelihood.py
-  mcmc.py
-  priors.py
-  states.py
+  __init__.py                     
+  diagnostics.py                  BME optimization file to optimize the Metropolis-Hastings Algorithm
+  homodyne.py                     Simulate the homodyne data same as MLE
+  likelihood.py                   for pre-computing the likelihood and storing before going to MH algorithm
+  mcmc.py                         Implements the Metropolis-Hastings Algorithm
+  priors.py                       choice of priors, includes local haar random step
+  states.py                       contains the relevant states we need to estimate
 ```
 
 ## Setup
